@@ -1,75 +1,122 @@
-// src/context/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from 'react';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-  sendPasswordResetEmail,
-} from 'firebase/auth';
-import { auth, isFirebaseConfigured } from '../firebase/config';
-import { createUserProfile, getUserProfile } from '../firebase/firestore';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const AuthContext = createContext(null);
-
-function requireFirebaseConfigured() {
-  if (!isFirebaseConfigured) {
-    throw new Error('Firebase is not configured. Set the REACT_APP_FIREBASE_* environment variables or replace the placeholders in src/firebase/config.js.');
-  }
-}
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Register new student
   async function register(name, email, password, role = 'student') {
-    requireFirebaseConfigured();
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(cred.user, { displayName: name });
-    await createUserProfile(cred.user.uid, { name, email, role });
-    return cred;
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase is not configured. Please set the environment variables.');
+    }
+
+    const { data: { user }, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name }
+      }
+    });
+
+    if (error) throw error;
+    if (!user) throw new Error('Registration failed');
+
+    const safeName = name.trim() || 'Student';
+    const avatarInitials = safeName
+      .split(/\s+/)
+      .map(n => n[0])
+      .filter(Boolean)
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'S';
+
+    const { error: profileError } = await supabase
+      .from('users')
+      .insert({
+        uid: user.id,
+        name: safeName,
+        email: email,
+        role: role,
+        avatar_initials: avatarInitials,
+        unlocked_speeds: [60],
+        current_speed: 60,
+      });
+
+    if (profileError) throw profileError;
+    return { user };
   }
 
-  // Login
   async function login(email, password) {
-    requireFirebaseConfigured();
-    return await signInWithEmailAndPassword(auth, email, password);
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase is not configured. Please set the environment variables.');
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+    return data;
   }
 
-  // Logout
   async function logout() {
-    await signOut(auth);
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
     setCurrentUser(null);
     setUserProfile(null);
   }
 
-  // Reset password
   async function resetPassword(email) {
-    requireFirebaseConfigured();
-    await sendPasswordResetEmail(auth, email);
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase is not configured. Please set the environment variables.');
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
   }
 
-  // Watch auth state
+  async function fetchUserProfile(uid) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('uid', uid)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+    return data;
+  }
+
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async user => {
-      setCurrentUser(user);
-      try {
-        if (user) {
-          const profile = await getUserProfile(user.uid);
-          setUserProfile(profile);
-        } else {
-          setUserProfile(null);
-        }
-      } catch {
+    const { data: { subscription } } = supabase.auth.onAuthStateChanged(async (session) => {
+      setCurrentUser(session?.user ?? null);
+
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        setUserProfile(profile ? {
+          ...profile,
+          avatarInitials: profile.avatar_initials,
+          currentSpeed: profile.current_speed,
+          totalSessions: profile.total_sessions,
+          totalPoints: profile.total_points,
+          unlockedSpeeds: profile.unlocked_speeds,
+          lastActive: profile.last_active,
+          createdAt: profile.created_at,
+        } : null);
+      } else {
         setUserProfile(null);
-      } finally {
-        setLoading(false);
       }
+
+      setLoading(false);
     });
-    return unsub;
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const value = {

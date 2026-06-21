@@ -1,7 +1,7 @@
 // src/pages/PracticePage.jsx
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getPassages, saveSession, incrementPassagePlayCount } from '../firebase/firestore';
+import { getPassages, saveSession, incrementPassagePlayCount } from '../lib/database';
 import toast from 'react-hot-toast';
 import tablerIcons from '../icons/tablerIcons';
 

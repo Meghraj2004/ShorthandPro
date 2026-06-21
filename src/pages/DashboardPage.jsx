@@ -1,7 +1,7 @@
 // src/pages/DashboardPage.jsx
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getUserSessions } from '../firebase/firestore';
+import { getUserSessions } from '../lib/database';
 import { format, subDays, isSameDay } from 'date-fns';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,

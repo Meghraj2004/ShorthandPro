@@ -1,10 +1,10 @@
 // src/pages/LeaderboardPage.jsx
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { subscribeLeaderboard } from '../firebase/firestore';
+import { subscribeLeaderboard } from '../lib/database';
 import tablerIcons from '../icons/tablerIcons';
 
-const { IconTrophy, IconRefresh, IconMedal } = tablerIcons;
+const { IconTrophy, IconMedal } = tablerIcons;
 
 export default function LeaderboardPage() {
   const { currentUser } = useAuth();
@@ -55,9 +55,9 @@ export default function LeaderboardPage() {
         <div className="space-y-3">
           {board.map(entry => {
             const { emoji, bg } = rankStyle(entry.rank);
-            const isMe = entry.id === currentUser?.uid;
+            const isMe = entry.uid === currentUser?.uid;
             return (
-              <div key={entry.id}
+              <div key={entry.uid}
                 className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all
                   ${isMe ? 'border-primary-400 bg-primary-50 shadow-md' : bg}`}>
                 <div className="text-2xl font-extrabold w-10 text-center">{emoji}</div>

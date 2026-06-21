@@ -4,8 +4,8 @@ import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import {
   getAllUsers, getAllPassages, getPlatformStats, getRecentActivity,
   addPassage, updatePassage, deletePassage, adminUpdateUser
-} from '../firebase/firestore';
-import { uploadAudio } from '../firebase/storage';
+} from '../lib/database';
+import { uploadAudio } from '../lib/storage';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -13,8 +13,8 @@ import tablerIcons from '../icons/tablerIcons';
 
 const {
   IconLayoutDashboard, IconUsers, IconFileMusic, IconChartBar,
-  IconSettings, IconUpload, IconTrash, IconEdit, IconCheck,
-  IconX, IconSearch, IconShield, IconDownload, IconEye,
+  IconSettings, IconUpload, IconTrash, IconCheck,
+  IconX, IconSearch, IconShield, IconDownload,
 } = tablerIcons;
 
 // ── Sidebar ──────────────────────────────────────────────────────
